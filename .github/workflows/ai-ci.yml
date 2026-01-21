@@ -23,7 +23,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run tests
-        run: pytest > error.log || true   # <- continue even if tests fail
+        run: test_ci_trigger > error.log || true   # <- continue even if tests fail
 
       - name: Run AI Agent
         env:
@@ -31,5 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python ai_agent_pr.py
+
 
 
