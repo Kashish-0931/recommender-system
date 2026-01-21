@@ -66,7 +66,7 @@ repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
 
 repo.create_pull(
     title="AI Fix: CI failure",
-    body="This PR was generated automatically by Qwen-Coder via Groq.",
+    body="This PR was generated automatically by llama via Groq.",
     head=BRANCH,
     base="main"
 )
