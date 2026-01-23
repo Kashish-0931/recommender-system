@@ -42,7 +42,7 @@ jobs:
       - name: Clone AI agent repo
         if: failure()
         run: |
-          git clone https://github.com/Kashish-0931/ai-fix-agent.git
+          git clone https://github.com/Kashish-0931/ai-ci-agent-service.git
 
       - name: Run AI Fix Agent
         if: failure()
@@ -53,4 +53,5 @@ jobs:
         run: |
           pip install -r ai-ci-agent-service/requirements.txt
           python ai-ci-agent-service/ai_agent.py
+
 
