@@ -51,5 +51,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          pip install -r ai-fix-agent/requirements.txt
+          pip install -r ai-ci-agent-service/requirements.txt
           python ai-ci-agent-service/ai_agent.py
+
