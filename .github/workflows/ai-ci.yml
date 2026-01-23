@@ -1,51 +1,64 @@
 permissions:
   contents: write
   pull-requests: write
-name: Logic CI + AI Fix Agent
+
+name: Universal CI/CD + AI Fix Agent
 
 on:
   push:
   pull_request:
 
 jobs:
-  run-app:
+  ai-ci:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout target repo
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
+      # 3️⃣ Install base dependencies
       - name: Install dependencies
         run: |
-          pip install streamlit pandas pytest
+          pip install pytest streamlit pandas || true
 
-      - name: Logic validation
+      # 4️⃣ Run ANY validation / tests / logic
+      # This is where ANY error can occur
+      - name: Run CI logic
         id: validate
-        continue-on-error: true   # important to allow next steps to run
-        run: python tests/test_ci_trigger.py
-
-      - name: Save error log
-        if: ${{ steps.validate.outcome == 'failure' }}
+        continue-on-error: true
         run: |
-          echo "CI failed while validating logic" > error.log
+          python tests/test_ci_trigger.py 2>&1 | tee error.log
+          exit ${PIPESTATUS[0]}
 
+      # 5️⃣ Upload error log (ALWAYS)
       - name: Upload error log
-        if: ${{ steps.validate.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4   
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
         with:
-          name: error-log
+          name: workflow-error-log
           path: error.log
 
+      # 6️⃣ Clone AI agent repo ONLY if failure
       - name: Clone AI agent repo
         if: ${{ steps.validate.outcome == 'failure' }}
         run: |
           git clone https://github.com/Kashish-0931/ai-ci-agent-service.git
 
+      # 7️⃣ Configure git identity 
+      - name: Configure git identity
+        if: ${{ steps.validate.outcome == 'failure' }}
+        run: |
+          git config --global user.name "Kashish-0931"
+          git config --global user.email "bhatiakashish46@gmail.com"
+
+      # 8️⃣ Run AI Fix Agent
       - name: Run AI Fix Agent
         if: ${{ steps.validate.outcome == 'failure' }}
         env:
@@ -54,4 +67,6 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           pip install -r ai-ci-agent-service/requirements.txt
-          python ai-ci-agent-service/ai_agent.py
+          python ai-ci-agent-service/ai_agent.py error.log
+
+         
