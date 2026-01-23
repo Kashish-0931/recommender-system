@@ -26,7 +26,8 @@ jobs:
 
       - name: Logic validation
         id: validate
-        run: python test_ci_trigger.py
+        run: python tests/test_ci_trigger.py
+
 
       - name: Save error log
         if: ${{ steps.validate.outcome == 'failure' }}
@@ -47,5 +48,6 @@ jobs:
         run: |
           pip install -r ai-ci-agent-service/requirements.txt
           python ai-ci-agent-service/ai_agent.py
+
 
 
