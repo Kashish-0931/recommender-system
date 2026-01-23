@@ -24,31 +24,22 @@ jobs:
         run: |
           pip install streamlit pandas
 
-      - name: Logic validation (no tests)
-        run: |
-          python - <<EOF
-import pickle, sys
-try:
-    pickle.load(open("movies_dict.pkl","rb"))
-    pickle.load(open("similarity.pkl","rb"))
-    print("Logic OK")
-except Exception as e:
-    print(e)
-    sys.exit(1)
-EOF
+      - name: Logic validation
+        id: validate
+        run: python validate.py
 
       - name: Save error log
-        if: ${{ failure() }}
+        if: ${{ steps.validate.outcome == 'failure' }}
         run: |
           echo "CI failed while validating logic" > error.log
 
       - name: Clone AI agent repo
-        if: ${{ failure() }}
+        if: ${{ steps.validate.outcome == 'failure' }}
         run: |
           git clone https://github.com/Kashish-0931/ai-ci-agent-service.git
 
       - name: Run AI Fix Agent
-        if: ${{ failure() }}
+        if: ${{ steps.validate.outcome == 'failure' }}
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
