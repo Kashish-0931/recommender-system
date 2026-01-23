@@ -22,17 +22,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install streamlit pandas
+          pip install streamlit pandas pytest
 
       - name: Logic validation
         id: validate
+        continue-on-error: true   # ✅ Important
         run: python tests/test_ci_trigger.py
-
 
       - name: Save error log
         if: ${{ steps.validate.outcome == 'failure' }}
         run: |
           echo "CI failed while validating logic" > error.log
+
+      - name: Upload error log
+        if: ${{ steps.validate.outcome == 'failure' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: error-log
+          path: error.log
 
       - name: Clone AI agent repo
         if: ${{ steps.validate.outcome == 'failure' }}
@@ -48,7 +55,3 @@ jobs:
         run: |
           pip install -r ai-ci-agent-service/requirements.txt
           python ai-ci-agent-service/ai_agent.py
-
-
-
-
