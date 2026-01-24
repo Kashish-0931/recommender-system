@@ -1,4 +1,4 @@
-name: CI with error artifact
+name: Recommender CI with Agent
 
 on:
   push:
@@ -7,48 +7,48 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️ Checkout repo
       - uses: actions/checkout@v4
 
+      # 2️ Setup Python
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - run: pip install -r requirements.txt
+      # 3️ Install dependencies
+      - run: pip install -r requirements.txt pytest
 
-      - name: Syntax check
-        run: python -m py_compile app.py
-
-      - name: Import test
-        run: python -c "import app"
-
-      - name: Smoke test
+      # 4️ Run tests
+      - name: Run pytest
+        id: pytest
         run: |
-          python - <<EOF
-          import app
-          movie = app.movies.iloc[0].title
-          result = app.recommend(movie)
-          assert isinstance(result, list)
-          assert len(result) > 0
-          EOF
+          set +e
+          pytest test_app.py --maxfail=1 --disable-warnings
+          echo $? > result_status.txt
 
+      # 5️ Save error log if tests failed
       - name: Save error log
         if: failure()
-        run: echo "Smoke test failed" > error.log
+        run: |
+          echo "Tests failed" > error.log
+          cat result_status.txt >> error.log
 
-      - name: Upload error log
+      # 6️ Upload error log artifact (optional)
+      - name: Upload error log artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: workflow-error-log
           path: error.log
 
-      - name: Notify Agent repo
+      # 7️ Trigger AI agent (from separate repo)
+      - name: Notify AI agent repo
         if: failure()
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.AGENT_REPO_TOKEN }}
-          repository: Kashish-0931/universal-ci-fix-agent
+          repository: Kashish-0931/universal-ci-fix-agent  # Replace with your agent repo
           event-type: ci-failed
           client-payload: '{"repo": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
-
