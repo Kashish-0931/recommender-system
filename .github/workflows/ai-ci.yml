@@ -1,4 +1,4 @@
-name: Recommender CI with Agent
+name: Recommender CI with AI Agent
 
 on:
   push:
@@ -9,46 +9,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️ Checkout repo
+      # 1️⃣ Checkout repo
       - uses: actions/checkout@v4
 
-      # 2️ Setup Python
+      # 2️⃣ Setup Python
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️ Install dependencies
-      - run: pip install -r requirements.txt pytest
+      # 3️⃣ Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
 
-      # 4️ Run tests
+      # 4️⃣ Run tests (graceful fail)
       - name: Run pytest
         id: pytest
         run: |
-          set +e
+          set +e  # allow workflow to continue even if tests fail
           pytest test_app.py --maxfail=1 --disable-warnings
           echo $? > result_status.txt
 
-      # 5️ Save error log if tests failed
+      # 5️⃣ Save error log (if tests fail)
       - name: Save error log
-        if: failure()
         run: |
-          echo "Tests failed" > error.log
-          cat result_status.txt >> error.log
+          TEST_STATUS=$(cat result_status.txt)
+          if [ "$TEST_STATUS" != "0" ]; then
+            echo "Tests failed with exit code $TEST_STATUS" > error.log
+          fi
 
-      # 6️ Upload error log artifact (optional)
+      # 6️⃣ Upload error log artifact (optional)
       - name: Upload error log artifact
-        if: failure()
+        if: always()  # always upload for debugging, even if tests pass
         uses: actions/upload-artifact@v4
         with:
           name: workflow-error-log
           path: error.log
 
-      # 7️ Trigger AI agent (from separate repo)
-      - name: Notify AI agent repo
-        if: failure()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.AGENT_REPO_TOKEN }}
-          repository: Kashish-0931/universal-ci-fix-agent  # Replace with your agent repo
-          event-type: ci-failed
-          client-payload: '{"repo": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
+      # 7️⃣ Trigger AI agent (runs regardless of test outcome)
+      - name: Run AI Agent
+        if: always()  # ensure agent runs even if pytest crashes
+        run: |
+          if [ -f error.log ] && [ -s error.log ]; then
+            echo "Triggering AI agent for fixes..."
+            python agent/main.py \
+              --error error.log \
+              --repo ${{ github.repository }} \
+              --token ${{ secrets.AGENT_REPO_TOKEN }}
+          else
+            echo "No errors detected. AI agent will not run."
+          fi
