@@ -48,15 +48,12 @@ jobs:
           path: error.log
 
       # 7️⃣ Trigger AI agent (runs regardless of test outcome)
-      - name: Run AI Agent
-        if: always()  # ensure agent runs even if pytest crashes
-        run: |
-          if [ -f error.log ] && [ -s error.log ]; then
-            echo "Triggering AI agent for fixes..."
-            python agent/main.py \
-              --error error.log \
-              --repo ${{ github.repository }} \
-              --token ${{ secrets.AGENT_REPO_TOKEN }}
-          else
-            echo "No errors detected. AI agent will not run."
-          fi
+      - name: Notify AI agent repo
+        uses: peter-evans/repository-dispatch@v2
+  with:
+      token: ${{ secrets.AGENT_REPO_TOKEN }}
+      repository: Kashish-0931/universal-ci-fix-agent
+      event-type: ci-failed
+     client-payload: '{"repo": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
+
+
