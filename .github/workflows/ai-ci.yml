@@ -1,72 +1,53 @@
-permissions:
-  contents: write
-  pull-requests: write
-
-name: Universal CI/CD + AI Fix Agent
+name: CI with error artifact
 
 on:
   push:
   pull_request:
 
 jobs:
-  ai-ci:
+  validate:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout target repo
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install base dependencies
-      - name: Install dependencies
-        run: |
-          pip install pytest streamlit pandas || true
+      - run: pip install -r requirements.txt
 
-      # 4️⃣ Run ANY validation / tests / logic
-      # This is where ANY error can occur
-      - name: Run CI logic
-        id: validate
-        continue-on-error: true
-        run: |
-          python tests/test_ci_trigger.py 2>&1 | tee error.log
-          exit ${PIPESTATUS[0]}
+      - name: Syntax check
+        run: python -m py_compile app.py
 
-      # 5️⃣ Upload error log (ALWAYS)
+      - name: Import test
+        run: python -c "import app"
+
+      - name: Smoke test
+        run: |
+          python - <<EOF
+          import app
+          movie = app.movies.iloc[0].title
+          result = app.recommend(movie)
+          assert isinstance(result, list)
+          assert len(result) > 0
+          EOF
+
+      - name: Save error log
+        if: failure()
+        run: echo "Smoke test failed" > error.log
+
       - name: Upload error log
-        if: ${{ always() }}
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: workflow-error-log
           path: error.log
 
-      # 6️⃣ Clone AI agent repo ONLY if failure
-      - name: Clone AI agent repo
-        if: ${{ steps.validate.outcome == 'failure' }}
-        run: |
-          git clone https://github.com/Kashish-0931/ai-ci-agent-service.git
-
-      # 7️⃣ Configure git identity 
-      - name: Configure git identity
-        if: ${{ steps.validate.outcome == 'failure' }}
-        run: |
-          git config --global user.name "Kashish-0931"
-          git config --global user.email "bhatiakashish46@gmail.com"
-
-      # 8️⃣ Run AI Fix Agent
-      - name: Run AI Fix Agent
-        if: ${{ steps.validate.outcome == 'failure' }}
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          pip install -r ai-ci-agent-service/requirements.txt
-          python ai-ci-agent-service/ai_agent.py error.log
-
-         
+      - name: Notify Agent repo
+        if: failure()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.AGENT_REPO_TOKEN }}
+          repository: your-org/agent-repo
+          event-type: ci-failed
+          client-payload: '{"repo": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
