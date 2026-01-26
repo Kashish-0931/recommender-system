@@ -7,21 +7,10 @@ on:
 jobs:
   send-dummy-error:
     runs-on: ubuntu-latest
-    env:
-      # Use the secret from your repo
-      AGENT_URL: ${{ secrets.AGENT_URL }}
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Debug AGENT_URL
-        run: |
-          if [ -z "$AGENT_URL" ]; then
-            echo "AGENT_URL is empty! Did you reference the secret correctly?"
-            exit 1
-          fi
-          echo "AGENT_URL is set (masked)."
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -44,8 +33,12 @@ jobs:
           jq -Rs '{log: .}' error.log > error.json
           echo "Error JSON saved."
 
-      - name: Send log to LLM Agent
+      - name: Send log to LLM Agent directly
         run: |
+          # Replace this with your actual LLM agent URL
+          AGENT_URL="
+            https://universal-ci-fix-agent-2.onrender.com"
+
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
             -d @error.json)
@@ -54,6 +47,7 @@ jobs:
           echo "$RESPONSE"
 
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
 
 
 
