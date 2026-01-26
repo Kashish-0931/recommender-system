@@ -101,7 +101,7 @@ jobs:
           # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
  \
-            -H "Content-Type: application/json" \
+      -H "Content-Type: application/json" \
             -d @error.json)
 
           echo "=== LLM Agent Response ==="
@@ -109,3 +109,4 @@ jobs:
 
           # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
