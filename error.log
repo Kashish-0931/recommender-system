@@ -1,1 +1,12 @@
-python: can't open file '/home/runner/work/recommender-system/recommender-system/main.py': [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "/home/runner/work/recommender-system/recommender-system/./ai_agent_pr.py", line 4, in <module>
+    from groq import Groq
+ModuleNotFoundError: No module named 'groq'
+Traceback (most recent call last):
+  File "/home/runner/work/recommender-system/recommender-system/./test_app.py", line 2, in <module>
+    import pytest
+ModuleNotFoundError: No module named 'pytest'
+Traceback (most recent call last):
+  File "/home/runner/work/recommender-system/recommender-system/./app.py", line 1, in <module>
+    import streamlit as st
+ModuleNotFoundError: No module named 'streamlit'
