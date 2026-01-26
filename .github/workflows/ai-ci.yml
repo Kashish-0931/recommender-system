@@ -7,10 +7,21 @@ on:
 jobs:
   send-dummy-error:
     runs-on: ubuntu-latest
+    env:
+      # Make sure you have this secret in your repo
+      AGENT_URL: ${{ secrets.AGENT_URL }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Debug AGENT_URL
+        run: |
+          if [ -z "$AGENT_URL" ]; then
+            echo "AGENT_URL is empty!"
+            exit 1
+          fi
+          echo "AGENT_URL is set (masked for security)."
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -39,14 +50,7 @@ jobs:
           echo "Error JSON saved."
 
       - name: Send log to LLM Agent
-        env:
-          AGENT_URL: ${{ secrets.AGENT_URL }}
         run: |
-          if [ -z "$AGENT_URL" ]; then
-            echo "AGENT_URL not set!"
-            exit 1
-          fi
-
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
             -d @error.json)
@@ -54,9 +58,4 @@ jobs:
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
 
-          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-
-   
-
-
