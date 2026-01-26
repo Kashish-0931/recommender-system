@@ -1,3 +1,7 @@
+permissions:
+  contents: write
+  pull-requests: write
+
 name: AI CI Agent
 
 on:
@@ -50,3 +54,4 @@ jobs:
           DRY_RUN: true
         run: |
           python ai_agent_pr.py
+
