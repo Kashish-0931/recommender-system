@@ -1,25 +1,48 @@
-name: CI Auto-Fix
+name: CI Failure Detection using AI Agent
 
 on:
   push:
-    branches:
-      - main
   pull_request:
 
 jobs:
-  ci_fix:
+  ai-ci-agent:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Capture CI error log
-        run: |
-          # Example: run tests and capture log
-          pytest tests/ > ci.log 2>&1 || true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-      - name: Send log to LLM agent
+      - name: Install dependencies
         run: |
-          RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      # ---------------- CI STEP ----------------
+      - name: Run project (simulate CI)
+        id: run_ci
+        run: |
+          python main.py 2> error.log || true
+
+      # ---------------- SEND LOG TO AI AGENT ----------------
+      - name: Send CI log to Universal CI Agent
+        if: always()
+        run: |
+          echo "Sending CI logs to AI Agent..."
+          curl -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
             -H "Content-Type: application/json" \
-            -d "{\"log\": \"$(cat ci.log | sed 's/"/\\"/g')\"}")
-          echo "LLM Agent Response: $RESPONSE"
+            -d "{\"log\":\"$(sed 's/\"/\\\"/g' error.log)\"}"
+
+      # ---------------- UPLOAD LOG (OPTIONAL) ----------------
+      - name: Upload error log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-error-log
+          path: error.log
+
