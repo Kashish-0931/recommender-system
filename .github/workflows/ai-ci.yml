@@ -52,10 +52,11 @@ jobs:
 
           echo "$RESPONSE"
 
-          FILE=$(echo "$RESPONSE" | jq -r '.files_changed[0]')
+          # ✅ Force patch to the Python file, not error.log
+          FILE="recommender.py"
           CONTENT=$(echo "$RESPONSE" | jq -r '.patch')
 
-          if [ "$FILE" = "null" ] || [ -z "$FILE" ]; then
+          if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then
             echo "No fix generated"
             exit 0
           fi
@@ -96,3 +97,5 @@ jobs:
             --title "AI CI Fix for Recommender" \
             --body "Automatically generated fix by Universal CI Agent" \
             --base main
+
+
