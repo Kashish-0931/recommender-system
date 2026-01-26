@@ -1,50 +1,53 @@
-name: AI CI Test
+name: Test AI CI/CD Agent on Recommender
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
+    branches:
+      - main
 
 jobs:
-  test:
+  test-agent:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      # 1️⃣ Checkout the repo
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # 2️⃣ Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: '3.11'
 
+      # 3️⃣ Install dependencies (optional, safe)
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install pandas
 
-      - name: Run recommender (expected to fail)
+      # 4️⃣ Run recommender.py and capture error log
+      - name: Run recommender.py
         run: |
-          python error.py
-        continue-on-error: true
+          set +e  # continue even if script fails
+          python recommender.py 2> error.log || true
 
-      - name: Capture error log
-        if: failure()
-        run: |
-          echo "=== CI ERROR LOG ===" > error.log
-          python recommender.py >> error.log 2>&1 || true
-          cat error.log
-
-      - name: Call AI CI Agent
-        if: failure()
+      # 5️⃣ Send error log to your LLM agent
+      - name: Test LLM Agent
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AGENT_URL: ${{ secrets.LLM_AGENT_URL }}
         run: |
-          RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
+          LOG=$(cat error.log | sed ':a;N;$!ba;s/\n/\\n/g')
+          RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"log\":\"$(sed 's/\"/\\\"/g' error.log)\"}")
+            -d "{\"log\": \"$LOG\"}")
+          echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
 
-
-
-
+      # 6️⃣ Optional: warn if confidence is low
+      - name: Check confidence
+        run: |
+          CONF=$(echo "$RESPONSE" | jq '.confidence')
+          if (( $(echo "$CONF < 0.5" | bc -l) )); then
+            echo "Warning: Low confidence from LLM agent"
+          fi
