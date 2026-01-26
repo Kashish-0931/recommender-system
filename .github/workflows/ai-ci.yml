@@ -30,7 +30,7 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # 4️⃣ Run all Python files and capture errors
+      # 4️⃣ Run all Python scripts and capture errors
       - name: Run all Python scripts
         run: |
           rm -f error.log
@@ -96,5 +96,3 @@ jobs:
             --title "AI CI Fix for Recommender" \
             --body "Automatically generated fix by Universal CI Agent" \
             --base main
-
-
