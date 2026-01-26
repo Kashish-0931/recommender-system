@@ -18,5 +18,5 @@ def recommend_top_movies():
     top_movies = df.groupby("movie")["rating"].mean().sort_values(ascending=False)
     print(top_movies)
 
-if __name__ == "__main__":
+
     recommend_top_movies()
