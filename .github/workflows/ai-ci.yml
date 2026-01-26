@@ -10,38 +10,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repo
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Set up Python
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 3️⃣ Install dependencies (optional, safe)
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install pandas
 
-      # 4️⃣ Run recommender.py and capture error log
-      - name: Run error.py
+      # 4️⃣ Run recommender.py and capture stderr
+      - name: Run recommender.py
         run: |
-          set +e  # continue even if script fails
-          python  2> error.log error.py|| true
+          set +e  # Continue even if script fails
+          python recommender.py 2> error.log || true
 
-      # 5️⃣ Send error log to your LLM agent
+      # 5️⃣ Send error log to LLM Agent safely
       - name: Test LLM Agent
         env:
-          AGENT_URL: ${{ secrets.LLM_AGENT_URL }}
+          AGENT_URL: ${{ secrets.LLM_AGENT_URL }} # e.g., https://your-agent.onrender.com/ci
         run: |
-          LOG=$(cat error.log | sed ':a;N;$!ba;s/\n/\\n/g')
+          # Convert multi-line error log into safe JSON
+          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
+
+          # Send to LLM Agent
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"log\": \"$LOG\"}")
+            -d "$ERROR_CONTENT")
+
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
+
+          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
 
       # 6️⃣ Optional: warn if confidence is low
@@ -51,4 +58,6 @@ jobs:
           if (( $(echo "$CONF < 0.5" | bc -l) )); then
             echo "Warning: Low confidence from LLM agent"
           fi
+
+
 
