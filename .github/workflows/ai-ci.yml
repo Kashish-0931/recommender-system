@@ -1,101 +1,49 @@
-name: AI CI Agent for Recommender
+name: AI CI Test
 
 on:
   push:
-    branches: [ main ]
-
-permissions:
-  contents: write
-  pull-requests: write
+    branches: [ "main" ]
+  pull_request:
 
 jobs:
-  ai-ci-fix:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+          python -m pip install --upgrade pip
+          pip install pandas
 
-      # 4️⃣ Run all Python scripts and capture errors
-      - name: Run all Python scripts
+      - name: Run recommender (expected to fail)
         run: |
-          rm -f error.log
-          for file in $(find . -name "*.py"); do
-            python "$file" 2>> error.log || true
-          done
-          if [ ! -s error.log ]; then
-            echo "No errors found"
-            exit 0
-          fi
+          python recommender.py
+        continue-on-error: true
 
-      # 5️⃣ Send error log to AI CI Agent
+      - name: Capture error log
+        if: failure()
+        run: |
+          echo "=== CI ERROR LOG ===" > error.log
+          python recommender.py >> error.log 2>&1 || true
+          cat error.log
+
       - name: Call AI CI Agent
-        id: ai
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg log "$(cat error.log)" '{log: $log}')")
-
+            -d "{\"log\":\"$(sed 's/\"/\\\"/g' error.log)\"}")
           echo "$RESPONSE"
 
-          # ✅ Force patch to the Python file, not error.log
-          FILE="recommender.py"
-          CONTENT=$(echo "$RESPONSE" | jq -r '.patch')
-
-          if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then
-            echo "No fix generated"
-            exit 0
-          fi
-
-          echo "file=$FILE" >> $GITHUB_OUTPUT
-          echo "patch<<EOF" >> $GITHUB_OUTPUT
-          echo "$CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # 6️⃣ Apply patch
-      - name: Apply fix
-        if: steps.ai.outputs.file
-        run: |
-          echo "${{ steps.ai.outputs.patch }}" > "${{ steps.ai.outputs.file }}"
-
-      # 7️⃣ Commit & push fix
-      - name: Commit and push
-        if: steps.ai.outputs.file
-        run: |
-          git config user.name "ci-agent"
-          git config user.email "ci-agent@users.noreply.github.com"
-
-          BRANCH="ai-fix-${{ github.run_id }}"
-          git checkout -b "$BRANCH"
-          git add .
-          git commit -m "AI CI auto-fix for recommender"
-          git push origin "$BRANCH"
-
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-
-      # 8️⃣ Create Pull Request
-      - name: Create Pull Request
-        if: steps.ai.outputs.file && github.actor != 'github-actions[bot]'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr create \
-            --title "AI CI Fix for Recommender" \
-            --body "Automatically generated fix by Universal CI Agent" \
-            --base main
 
 
