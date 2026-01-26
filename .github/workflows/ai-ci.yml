@@ -19,14 +19,14 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Run app (capture error)
+    - name: Run app and capture error
       run: |
         python main.py 2> error.log || true
 
     - name: Send error to AI agent
       id: ai
       run: |
-        RESPONSE=$(curl -s -X POST https://YOUR_AGENT_URL/ci \
+        RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
           -H "Content-Type: application/json" \
           -d "$(jq -n --arg log "$(cat error.log)" '{log: $log}')")
 
@@ -38,12 +38,12 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Apply AI fix
-      if: steps.ai.outputs.filename != ""
+      if: steps.ai.outputs.filename
       run: |
         echo "${{ steps.ai.outputs.content }}" > ${{ steps.ai.outputs.filename }}
 
     - name: Commit & push
-      if: steps.ai.outputs.filename != ""
+      if: steps.ai.outputs.filename
       run: |
         git config user.name "ci-agent"
         git config user.email "ci-agent@users.noreply.github.com"
@@ -54,7 +54,7 @@ jobs:
         git push origin HEAD
 
     - name: Create PR
-      if: steps.ai.outputs.filename != ""
+      if: steps.ai.outputs.filename
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -62,6 +62,5 @@ jobs:
           --title "AI CI Fix" \
           --body "Auto-generated CI fix" \
           --base main
-
 
 
