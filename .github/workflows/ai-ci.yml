@@ -1,66 +1,50 @@
-name: Test AI CI/CD Agent on Recommender
+name: Test LLM Agent with error.py
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  test-agent:
+  test-error:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
+      - name: Run error.py and save log
         run: |
-          pip install --upgrade pip
-          pip install pandas
-
-      # 4️⃣ Run recommender.py and capture stderr
-      - name: Run recommender.py
+          python error.py > error.log 2>&1
+          echo "Error log generated."
+          
+      - name: Convert log to JSON
         run: |
-          set +e  # Continue even if script fails
-          python recommender.py 2> error.log || true
-
-      # 5️⃣ Send error log to LLM Agent safely
-      - name: Test LLM Agent
-        env:
-          AGENT_URL: ${{ secrets.LLM_AGENT_URL }} # e.g.,https://universal-ci-fix-agent-2.onrender.com
-        run: |
-          # Convert multi-line error log into safe JSON
           ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
+          echo "error_content=$ERROR_CONTENT" >> $GITHUB_ENV
 
-          # Send to LLM Agent
-          RESPONSE=$(curl -s -X POST "https://universal-ci-fix-agent-2.onrender.com" \
+      - name: Send to LLM Agent
+        env:
+          AGENT_URL: ${{ secrets.AGENT_URL }}
+        run: |
+          if [ -z "$AGENT_URL" ]; then
+            echo "AGENT_URL not set!"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -X POST "
+              https://universal-ci-fix-agent-2.onrender.com " \
             -H "Content-Type: application/json" \
-            -d "$ERROR_CONTENT")
+            -d "$error_content")
 
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
 
-          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-
-      # 6️⃣ Optional: warn if confidence is low
-      - name: Check confidence
-        run: |
-          CONF=$(echo "$RESPONSE" | jq '.confidence')
-          if (( $(echo "$CONF < 0.5" | bc -l) )); then
-            echo "Warning: Low confidence from LLM agent"
-          fi
-
-
-
 
 
 
