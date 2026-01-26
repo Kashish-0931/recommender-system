@@ -25,7 +25,7 @@ jobs:
 
       - name: Run recommender (expected to fail)
         run: |
-          python recommender.py
+          python error.py
         continue-on-error: true
 
       - name: Capture error log
@@ -44,6 +44,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"log\":\"$(sed 's/\"/\\\"/g' error.log)\"}")
           echo "$RESPONSE"
+
 
 
 
