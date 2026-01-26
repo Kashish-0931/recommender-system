@@ -1,4 +1,4 @@
-name: AI CI Agent
+name: AI CI Agent for Recommender
 
 on:
   push:
@@ -13,29 +13,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Python
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install deps (if present)
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      # 4️⃣ Run app and capture CI error
-      - name: Run app (capture error)
+      # 4️⃣ Run all Python files and capture errors
+      - name: Run all Python scripts
         run: |
-          python main.py 2> error.log || true
+          rm -f error.log
+          for file in $(find . -name "*.py"); do
+            python "$file" 2>> error.log || true
+          done
+          if [ ! -s error.log ]; then
+            echo "No errors found"
+            exit 0
+          fi
 
-      # 5️⃣ Send error to AI agent
+      # 5️⃣ Send error log to AI CI Agent
       - name: Call AI CI Agent
         id: ai
         run: |
@@ -74,22 +81,20 @@ jobs:
           BRANCH="ai-fix-${{ github.run_id }}"
           git checkout -b "$BRANCH"
           git add .
-          git commit -m "AI CI auto-fix"
+          git commit -m "AI CI auto-fix for recommender"
           git push origin "$BRANCH"
 
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-      # 8️⃣ Create Pull Request (WORKING)
+      # 8️⃣ Create Pull Request
       - name: Create Pull Request
         if: steps.ai.outputs.file && github.actor != 'github-actions[bot]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr create \
-            --title "AI CI Fix" \
+            --title "AI CI Fix for Recommender" \
             --body "Automatically generated fix by Universal CI Agent" \
             --base main
-
-
 
 
