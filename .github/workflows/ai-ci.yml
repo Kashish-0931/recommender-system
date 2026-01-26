@@ -35,7 +35,7 @@ jobs:
       # 5️⃣ Send error log to LLM Agent safely
       - name: Test LLM Agent
         env:
-          AGENT_URL: ${{ secrets.LLM_AGENT_URL }} # e.g., https://your-agent.onrender.com/ci
+          AGENT_URL: ${{ secrets.LLM_AGENT_URL }} # e.g.,https://universal-ci-fix-agent-2.onrender.com
         run: |
           # Convert multi-line error log into safe JSON
           ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
@@ -58,6 +58,7 @@ jobs:
           if (( $(echo "$CONF < 0.5" | bc -l) )); then
             echo "Warning: Low confidence from LLM agent"
           fi
+
 
 
 
