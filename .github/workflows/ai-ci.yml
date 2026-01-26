@@ -36,8 +36,7 @@ jobs:
       - name: Send log to LLM Agent directly
         run: |
           # Replace this with your actual LLM agent URL
-          AGENT_URL="
-            https://universal-ci-fix-agent-2.onrender.com"
+          AGENT_URL="https://universal-ci-fix-agent-2.onrender.com"
 
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
@@ -47,6 +46,7 @@ jobs:
           echo "$RESPONSE"
 
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
 
 
 
