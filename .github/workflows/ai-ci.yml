@@ -27,12 +27,13 @@ jobs:
     - name: Run error.py and capture errors
       run: |
         set -o pipefail
-        python error.py 2>&1 | tee error.log
+        python error.py 2>&1 | tee error.log || true  # always continue even if error
 
     - name: Send error log to AI CI Agent
       run: |
         echo "Sending error log to AI agent..."
-        LOG=$(python3 -c "import json; print(json.dumps(open('error.log').read()))")
+        # Use jq to properly escape log as JSON string
+        LOG=$(jq -Rs '.' error.log)
         RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
           -H "Content-Type: application/json" \
           -d "{\"log\": $LOG}")
