@@ -1,10 +1,10 @@
-# recommender.py
-# Sample recommender with intentional error for testing AI CI Agent
+# error.py
+# Intentional error to test AI CI agent
 
 import pandas as pd
 
-# Intentional typo in function name
-def load_dtaa():
+# This function is correctly defined
+def load_data():
     data = {
         "user": ["Alice", "Bob", "Charlie"],
         "movie": ["Inception", "Titanic", "Matrix"],
@@ -12,11 +12,12 @@ def load_dtaa():
     }
     return pd.DataFrame(data)
 
+# This will cause a NameError intentionally
 def recommend_top_movies():
-    # This line will cause an error (typo function call)
-    df = load_data()  
+    # Typo function call (error)
+    df = load_dtaa()  
     top_movies = df.groupby("movie")["rating"].mean().sort_values(ascending=False)
     print(top_movies)
 
-
-    recommend_top_movies()
+# Execute function to trigger error
+recommend_top_movies()
