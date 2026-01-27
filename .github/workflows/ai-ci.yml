@@ -32,7 +32,7 @@ jobs:
     - name: Send error log to AI CI Agent
       run: |
         echo "Sending error log to AI agent..."
-        LOG=$(cat error.log | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
+        LOG=$(python3 -c "import json; print(json.dumps(open('error.log').read()))")
         RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
           -H "Content-Type: application/json" \
           -d "{\"log\": $LOG}")
