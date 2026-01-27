@@ -1,4 +1,4 @@
-name: AI CI Fix Agent (Recommender)
+name: AI CI Fix Agent Test
 
 on:
   push:
@@ -33,13 +33,10 @@ jobs:
           AGENT_URL: https://universal-ci-fix-agent-2.onrender.com/ci
         run: |
           echo "Sending error log to AI agent..."
-
           ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
-
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
             -d "$ERROR_CONTENT")
-
           echo "===== AI CI Agent Response ====="
           echo "$RESPONSE"
 
@@ -48,6 +45,8 @@ jobs:
         run: |
           echo "CI failed — AI agent suggestion printed above."
           exit 1
+
+
 
 
 
